@@ -1,0 +1,57 @@
+[
+  {
+    "tester_log_prefix": "stage-1",
+    "slug": "bencode-string",
+    "title": "Decode bencoded strings"
+  },
+  {
+    "tester_log_prefix": "stage-2",
+    "slug": "bencode-int",
+    "title": "Decode bencoded integers"
+  },
+  {
+    "tester_log_prefix": "stage-3",
+    "slug": "bencode-list",
+    "title": "Decode bencoded lists"
+  },
+  {
+    "tester_log_prefix": "stage-4",
+    "slug": "bencode-dict",
+    "title": "Decode bencoded dictionaries"
+  },
+  {
+    "tester_log_prefix": "stage-5",
+    "slug": "parse-torrent",
+    "title": "Parse torrent file"
+  },
+  {
+    "tester_log_prefix": "stage-6",
+    "slug": "infohash",
+    "title": "Calculate info hash"
+  },
+  {
+    "tester_log_prefix": "stage-7",
+    "slug": "hashes",
+    "title": "Piece hashes"
+  },
+  {
+    "tester_log_prefix": "stage-8",
+    "slug": "peers",
+    "title": "Discover peers"
+  },
+  {
+    "tester_log_prefix": "stage-9",
+    "slug": "handshake",
+    "title": "Peer handshake"
+  },
+  {
+    "tester_log_prefix": "stage-10",
+    "slug": "dl-piece",
+    "title": "Download a piece"
+  },
+  {
+    "tester_log_prefix": "stage-11",
+    "slug": "dl-file",
+    "title": "Download the whole file"
+  }
+]
