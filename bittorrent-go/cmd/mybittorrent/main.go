@@ -66,7 +66,6 @@ func decodeBencode(bencodedString string) (interface{}, int, error) {
 	} else if rune(bencodedString[0]) == 'd' {
 		return decodeDictionary(bencodedString)
 	} else {
-		fmt.Printf("DI SINI %s\n", string(bencodedString[0]))
 		return nil, -1, fmt.Errorf("only strings are supported at the moment")
 	}
 }
