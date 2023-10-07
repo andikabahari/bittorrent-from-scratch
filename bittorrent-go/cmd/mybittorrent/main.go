@@ -6,59 +6,77 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"unicode"
 )
-
-// Example:
-// - 5:hello -> hello
-// - 10:hello12345 -> hello12345
-func decodeBencode(bencodedString string) (interface{}, error) {
-	if unicode.IsDigit(rune(bencodedString[0])) {
-		var firstColonIndex int
-		for i := 0; i < len(bencodedString); i++ {
-			if bencodedString[i] == ':' {
-				firstColonIndex = i
-				break
-			}
-		}
-
-		lengthStr := bencodedString[:firstColonIndex]
-		length, err := strconv.Atoi(lengthStr)
-		if err != nil {
-			return "", err
-		}
-
-		return bencodedString[firstColonIndex+1 : firstColonIndex+1+length], nil
-	} else if rune(bencodedString[0]) == 'i' && rune(bencodedString[len(bencodedString)-1]) == 'e' {
-		i, err := strconv.Atoi(bencodedString[1 : len(bencodedString)-1])
-		if err != nil {
-			return "", err
-		}
-		return i, nil
-	} else {
-		return "", fmt.Errorf("Only strings are supported at the moment")
-	}
-}
 
 func main() {
 	command := os.Args[1]
 	switch command {
 	case "decode":
 		bencodedValue := os.Args[2]
-		decoded, err := decodeBencode(bencodedValue)
+		decoded, _, err := decodeBencode(bencodedValue)
 		if err != nil {
-			fmt.Println(err)
-			return
+			log.Fatalf("Error decoding bencode: %v", err)
 		}
 
 		jsonOutput, err := json.Marshal(decoded)
 		if err != nil {
-			log.Fatalf("Error marshaling: %v", err)
+			log.Fatalf("Error marshaling json: %v", err)
 		}
 		fmt.Println(string(jsonOutput))
 
 	default:
-		fmt.Println("Unknown command: " + command)
-		os.Exit(1)
+		log.Fatalf("Unknown command: %s", command)
 	}
+}
+
+// Example:
+// - 5:hello -> hello
+// - 10:hello12345 -> hello12345
+func decodeBencode(bencodedString string) (interface{}, int, error) {
+	if unicode.IsDigit(rune(bencodedString[0])) {
+		return decodeString(bencodedString)
+	} else if rune(bencodedString[0]) == 'i' {
+		return decodeInteger(bencodedString)
+	} else if rune(bencodedString[0]) == 'l' {
+		return decodeList(bencodedString)
+	} else {
+		fmt.Printf("DI SINI %s\n", string(bencodedString[0]))
+		return nil, -1, fmt.Errorf("only strings are supported at the moment")
+	}
+}
+
+func decodeString(s string) (string, int, error) {
+	i := strings.Index(s, ":")
+	length, err := strconv.Atoi(s[:i])
+	if err != nil {
+		return "", -1, err
+	}
+	offset := i + length
+	return s[i+1 : offset+1], offset, nil
+}
+
+func decodeInteger(s string) (int, int, error) {
+	i := strings.Index(s, "e")
+	integer, err := strconv.Atoi(s[1:i])
+	if err != nil {
+		return 0, -1, err
+	}
+	offset := i
+	return integer, offset, err
+}
+
+func decodeList(s string) ([]interface{}, int, error) {
+	list := make([]interface{}, 0)
+	i := 1
+	for i < len(s)-1 && s[i] != 'e' {
+		data, offset, err := decodeBencode(s[i:])
+		if err != nil {
+			return []interface{}{}, -1, err
+		}
+		list = append(list, data)
+		i += offset + 1
+	}
+	return list, i, nil
 }
