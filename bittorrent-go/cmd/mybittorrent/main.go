@@ -26,14 +26,36 @@ func main() {
 		}
 		fmt.Println(string(jsonOutput))
 
+	case "info":
+		torrentPath := os.Args[2]
+		bencoded, err := os.ReadFile(torrentPath)
+		if err != nil {
+			log.Fatalf("Error reading file: %s", err)
+		}
+
+		decoded, _, err := decodeBencode(string(bencoded))
+		if err != nil {
+			log.Fatalf("Error decoding bencode: %v", err)
+		}
+
+		jsonData, err := json.Marshal(decoded)
+		if err != nil {
+			log.Fatalf("Error marshaling json: %v", err)
+		}
+
+		meta := metainfo{}
+		err = json.Unmarshal(jsonData, &meta)
+		if err != nil {
+			log.Fatalf("Error unmarshaling json: %v", err)
+		}
+		fmt.Printf("Tracker URL: %s\n", meta.Announce)
+		fmt.Printf("Length: %d\n", meta.Info.Length)
+
 	default:
 		log.Fatalf("Unknown command: %s", command)
 	}
 }
 
-// Example:
-// - 5:hello -> hello
-// - 10:hello12345 -> hello12345
 func decodeBencode(bencodedString string) (interface{}, int, error) {
 	if unicode.IsDigit(rune(bencodedString[0])) {
 		return decodeString(bencodedString)
@@ -55,8 +77,7 @@ func decodeString(s string) (string, int, error) {
 	if err != nil {
 		return "", -1, err
 	}
-	offset := i + length
-	return s[i+1 : offset+1], offset, nil
+	return s[i+1 : i+length+1], i + length, nil
 }
 
 func decodeInteger(s string) (int, int, error) {
@@ -65,8 +86,7 @@ func decodeInteger(s string) (int, int, error) {
 	if err != nil {
 		return 0, -1, err
 	}
-	offset := i
-	return integer, offset, err
+	return integer, i, err
 }
 
 func decodeList(s string) ([]interface{}, int, error) {
@@ -100,4 +120,15 @@ func decodeDictionary(s string) (map[string]interface{}, int, error) {
 		dict[key] = value
 	}
 	return dict, i, nil
+}
+
+type metainfo struct {
+	Announce  string `json:"announce"`
+	CreatedBy string `json:"created by"`
+	Info      struct {
+		Length      int    `json:"length"`
+		Name        string `json:"name"`
+		PieceLength int    `json:"piece length"`
+		Pieces      string `json:"pieces"`
+	} `json:"info"`
 }
