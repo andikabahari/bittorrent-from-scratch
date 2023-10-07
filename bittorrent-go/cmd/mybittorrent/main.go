@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -8,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/jackpal/bencode-go"
 )
 
 func main() {
@@ -28,28 +33,30 @@ func main() {
 
 	case "info":
 		torrentPath := os.Args[2]
-		bencoded, err := os.ReadFile(torrentPath)
+		bencoded, err := os.Open(torrentPath)
 		if err != nil {
 			log.Fatalf("Error reading file: %s", err)
 		}
+		defer bencoded.Close()
 
-		decoded, _, err := decodeBencode(string(bencoded))
-		if err != nil {
-			log.Fatalf("Error decoding bencode: %v", err)
-		}
-
-		jsonData, err := json.Marshal(decoded)
-		if err != nil {
-			log.Fatalf("Error marshaling json: %v", err)
-		}
-
+		// Use bencode.Unmarshal() because decodeBencode() has improper implementation.
 		meta := metainfo{}
-		err = json.Unmarshal(jsonData, &meta)
+		err = bencode.Unmarshal(bencoded, &meta)
 		if err != nil {
-			log.Fatalf("Error unmarshaling json: %v", err)
+			log.Fatalf("Error unmarshaling bencode: %v", err)
 		}
-		fmt.Printf("Tracker URL: %s\n", meta.Announce)
-		fmt.Printf("Length: %d\n", meta.Info.Length)
+
+		var buf bytes.Buffer
+		err = bencode.Marshal(&buf, meta.Info)
+		if err != nil {
+			log.Fatalf("Error marshaling bencode: %v", err)
+		}
+		checksum := sha1.Sum(buf.Bytes())
+		infoHash := hex.EncodeToString(checksum[:])
+
+		fmt.Println("Tracker URL:", meta.Announce)
+		fmt.Println("Length:", meta.Info.Length)
+		fmt.Println("Info Hash:", infoHash)
 
 	default:
 		log.Fatalf("Unknown command: %s", command)
@@ -122,12 +129,12 @@ func decodeDictionary(s string) (map[string]interface{}, int, error) {
 }
 
 type metainfo struct {
-	Announce  string `json:"announce"`
-	CreatedBy string `json:"created by"`
+	Announce  string `json:"announce" bencode:"announce"`
+	CreatedBy string `json:"created by" bencode:"created by"`
 	Info      struct {
-		Length      int    `json:"length"`
-		Name        string `json:"name"`
-		PieceLength int    `json:"piece length"`
-		Pieces      string `json:"pieces"`
-	} `json:"info"`
+		Length      int    `json:"length" bencode:"length"`
+		Name        string `json:"name" bencode:"name"`
+		PieceLength int    `json:"piece length" bencode:"piece length"`
+		Pieces      string `json:"pieces" bencode:"pieces"`
+	} `json:"info" bencode:"info"`
 }
