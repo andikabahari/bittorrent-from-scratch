@@ -54,9 +54,17 @@ func main() {
 		checksum := sha1.Sum(buf.Bytes())
 		infoHash := hex.EncodeToString(checksum[:])
 
+		pieceHashes := make([]string, 0, len(meta.Info.Pieces)/20)
+		for i := 0; i < len(meta.Info.Pieces); i += 20 {
+			pieceHash := hex.EncodeToString([]byte(meta.Info.Pieces[i : i+20]))
+			pieceHashes = append(pieceHashes, pieceHash)
+		}
+
 		fmt.Println("Tracker URL:", meta.Announce)
 		fmt.Println("Length:", meta.Info.Length)
 		fmt.Println("Info Hash:", infoHash)
+		fmt.Println("Piece Length:", meta.Info.PieceLength)
+		fmt.Printf("Piece Hashes:\n%s\n", strings.Join(pieceHashes, "\n"))
 
 	default:
 		log.Fatalf("Unknown command: %s", command)
