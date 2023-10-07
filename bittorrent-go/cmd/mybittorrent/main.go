@@ -41,6 +41,8 @@ func decodeBencode(bencodedString string) (interface{}, int, error) {
 		return decodeInteger(bencodedString)
 	} else if rune(bencodedString[0]) == 'l' {
 		return decodeList(bencodedString)
+	} else if rune(bencodedString[0]) == 'd' {
+		return decodeDictionary(bencodedString)
 	} else {
 		fmt.Printf("DI SINI %s\n", string(bencodedString[0]))
 		return nil, -1, fmt.Errorf("only strings are supported at the moment")
@@ -70,13 +72,32 @@ func decodeInteger(s string) (int, int, error) {
 func decodeList(s string) ([]interface{}, int, error) {
 	list := make([]interface{}, 0)
 	i := 1
-	for i < len(s)-1 && s[i] != 'e' {
+	for i < len(s) && s[i] != 'e' {
 		data, offset, err := decodeBencode(s[i:])
 		if err != nil {
-			return []interface{}{}, -1, err
+			return nil, -1, err
 		}
 		list = append(list, data)
 		i += offset + 1
 	}
 	return list, i, nil
+}
+
+func decodeDictionary(s string) (map[string]interface{}, int, error) {
+	dict := make(map[string]interface{})
+	i := 1
+	for i < len(s) && s[i] != 'e' {
+		key, offset, err := decodeString(s[i:])
+		if err != nil {
+			return nil, -1, err
+		}
+		i += offset + 1
+		value, offset, err := decodeBencode(s[i:])
+		if err != nil {
+			return nil, -1, err
+		}
+		i += offset + 1
+		dict[key] = value
+	}
+	return dict, i, nil
 }
