@@ -1,45 +1,46 @@
 package main
 
 import (
-	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
-	"io"
-	"log"
-
-	"github.com/jackpal/bencode-go"
 )
 
 type metainfo struct {
-	Announce  string `json:"announce" bencode:"announce"`
-	CreatedBy string `json:"created by" bencode:"created by"`
-	Info      info   `json:"info" bencode:"info"`
+	Announce string
+	Info     info
 
-	infoHash    [20]byte
+	infoHash    string
 	pieceHashes []string
 }
 
 type info struct {
-	Length      int    `json:"length" bencode:"length"`
-	Name        string `json:"name" bencode:"name"`
-	PieceLength int    `json:"piece length" bencode:"piece length"`
-	Pieces      string `json:"pieces" bencode:"pieces"`
+	Length      int
+	Name        string
+	PieceLength int
+	Pieces      string
 }
 
-func newMetainfo(r io.Reader) (metainfo, error) {
-	meta := metainfo{}
-	err := bencode.Unmarshal(r, &meta)
+func newMetainfo(bencode string) (metainfo, error) {
+	decoded, err := decodeBencode(bencode)
 	if err != nil {
 		return metainfo{}, err
 	}
 
-	var buf bytes.Buffer
-	err = bencode.Marshal(&buf, meta.Info)
-	if err != nil {
-		log.Fatalf("Error marshaling bencode: %v", err)
+	dict1 := decoded.(map[string]interface{})
+	dict2 := dict1["info"].(map[string]interface{})
+	meta := metainfo{
+		Announce: dict1["announce"].(string),
+		Info: info{
+			Length:      dict2["length"].(int),
+			Name:        dict2["name"].(string),
+			PieceLength: dict2["piece length"].(int),
+			Pieces:      dict2["pieces"].(string),
+		},
 	}
-	checksum := sha1.Sum(buf.Bytes())
-	meta.infoHash = checksum
+
+	infoBencode := encodeBencode(dict2)
+	checksum := sha1.Sum([]byte(infoBencode))
+	meta.infoHash = hex.EncodeToString(checksum[:])
 
 	pieceHashes := make([]string, 0, len(meta.Info.Pieces)/20)
 	for i := 0; i < len(meta.Info.Pieces); i += 20 {

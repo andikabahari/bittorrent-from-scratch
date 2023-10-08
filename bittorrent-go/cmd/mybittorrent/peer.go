@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,7 +10,7 @@ import (
 )
 
 type trackerRequest struct {
-	InfoHash   [20]byte
+	InfoHash   string
 	PeerId     string
 	Port       int
 	Uploaded   int
@@ -34,8 +35,13 @@ func getPeers(announce string, request trackerRequest) (trackerResponse, error) 
 		return trackerResponse{}, err
 	}
 
+	infoHash, err := hex.DecodeString(request.InfoHash)
+	if err != nil {
+		return trackerResponse{}, err
+	}
+
 	q := u.Query()
-	q.Set("info_hash", string(request.InfoHash[:]))
+	q.Set("info_hash", string(infoHash))
 	q.Set("peer_id", request.PeerId)
 	q.Set("port", strconv.Itoa(request.Port))
 	q.Set("uploaded", strconv.Itoa(request.Uploaded))

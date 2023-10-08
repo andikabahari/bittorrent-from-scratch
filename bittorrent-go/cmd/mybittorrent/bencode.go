@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -25,7 +26,7 @@ func encodeBencode(v interface{}) string {
 			keys[i] = k
 			i++
 		}
-		// sort.Strings(keys)
+		sort.Strings(keys)
 		pairs := make([]string, len(val))
 		for _, key := range keys {
 			encodedKey := encodeBencode(key)
@@ -40,18 +41,18 @@ func encodeBencode(v interface{}) string {
 	}
 }
 
-func decodeBencode(bencodedString string) (interface{}, error) {
-	firstChar := bencodedString[0]
+func decodeBencode(s string) (interface{}, error) {
+	firstChar := s[0]
 	if '0' <= firstChar && firstChar <= '9' {
-		return decodeString(bencodedString)
+		return decodeString(s)
 	}
 	switch firstChar {
 	case 'i':
-		return decodeInteger(bencodedString)
+		return decodeInteger(s)
 	case 'l':
-		return decodeList(bencodedString)
+		return decodeList(s)
 	case 'd':
-		return decodeDictionary(bencodedString)
+		return decodeDictionary(s)
 	}
 	return nil, fmt.Errorf("only strings are supported at the moment")
 }

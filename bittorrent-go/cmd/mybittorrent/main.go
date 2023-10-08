@@ -26,31 +26,29 @@ func main() {
 
 	case "info":
 		torrentPath := os.Args[2]
-		f, err := os.Open(torrentPath)
+		bencode, err := os.ReadFile(torrentPath)
 		if err != nil {
 			log.Fatalf("Error reading file: %s", err)
 		}
-		defer f.Close()
 
-		meta, err := newMetainfo(f)
+		meta, err := newMetainfo(string(bencode))
 		if err != nil {
 			log.Fatalf("Error creating metainfo: %v", err)
 		}
 		fmt.Println("Tracker URL:", meta.Announce)
 		fmt.Println("Length:", meta.Info.Length)
-		fmt.Printf("Info Hash: %x\n", meta.infoHash)
+		fmt.Println("Info Hash:", meta.infoHash)
 		fmt.Println("Piece Length:", meta.Info.PieceLength)
 		fmt.Printf("Piece Hashes:\n%s\n", strings.Join(meta.pieceHashes, "\n"))
 
 	case "peers":
 		torrentPath := os.Args[2]
-		f, err := os.Open(torrentPath)
+		bencode, err := os.ReadFile(torrentPath)
 		if err != nil {
 			log.Fatalf("Error reading file: %s", err)
 		}
-		defer f.Close()
 
-		meta, err := newMetainfo(f)
+		meta, err := newMetainfo(string(bencode))
 		if err != nil {
 			log.Fatalf("Error creating metainfo: %v", err)
 		}
