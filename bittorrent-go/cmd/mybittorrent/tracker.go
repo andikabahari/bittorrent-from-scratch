@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,7 +30,7 @@ type peer struct {
 	Port int
 }
 
-func getPeers(announce string, request trackerRequest) (trackerResponse, error) {
+func fetchTracker(announce string, request trackerRequest) (trackerResponse, error) {
 	u, err := url.Parse(announce)
 	if err != nil {
 		return trackerResponse{}, err
@@ -65,17 +66,23 @@ func getPeers(announce string, request trackerRequest) (trackerResponse, error) 
 	if err != nil {
 		return trackerResponse{}, err
 	}
-	dict := decoded.(map[string]interface{})
 
-	responsePeers := dict["peers"].(string)
+	dict, ok := decoded.(map[string]interface{})
+	if !ok {
+		return trackerResponse{}, errors.New("decoded value should be a dictionary")
+	}
+
+	responsePeers, _ := dict["peers"].(string)
 	peers := make([]peer, len(responsePeers)/6)
 	for i := 0; i < len(responsePeers); i += 6 {
 		peers[i/6].Ip = fmt.Sprintf("%d.%d.%d.%d", responsePeers[i], responsePeers[i+1], responsePeers[i+2], responsePeers[i+3])
 		peers[i/6].Port = int(responsePeers[i+4])<<8 + int(responsePeers[i+5])
 	}
 
+	interval, _ := dict["interval"].(int)
+
 	ret := trackerResponse{
-		Interval: dict["interval"].(int),
+		Interval: interval,
 		Peers:    peers,
 	}
 	return ret, nil
