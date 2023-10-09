@@ -132,8 +132,8 @@ func handshakeCmd() {
 	b := make([]byte, writeLen)
 	_, err = conn.Read(b)
 	if err != nil {
-		fmt.Println(err)
-		return
+		fmt.Fprintf(os.Stderr, "Error reading data from the connection: %v", err)
+		os.Exit(1)
 	}
 
 	// 1 byte of protocol string length
