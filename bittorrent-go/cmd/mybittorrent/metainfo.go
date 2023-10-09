@@ -3,14 +3,13 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
+	"os"
 )
 
 type metainfo struct {
 	Announce string
 	Info     info
-
-	infoHash    string
-	pieceHashes []string
 }
 
 type info struct {
@@ -20,34 +19,80 @@ type info struct {
 	Pieces      string
 }
 
-func newMetainfo(bencode string) (metainfo, error) {
-	decoded, err := decodeBencode(bencode)
+func parseTorrent(src string) (metainfo, error) {
+	bencode, err := os.ReadFile(src)
 	if err != nil {
 		return metainfo{}, err
 	}
 
-	dict1 := decoded.(map[string]interface{})
-	dict2 := dict1["info"].(map[string]interface{})
+	decoded, err := decodeBencode(string(bencode))
+	if err != nil {
+		return metainfo{}, err
+	}
+
+	metaDict, ok := decoded.(map[string]interface{})
+	if !ok {
+		return metainfo{}, errors.New("decoded value should be a dictionary")
+	}
+
+	announce, ok := metaDict["announce"].(string)
+	if !ok {
+		return metainfo{}, errors.New("announce not found")
+	}
+
+	infoDict, ok := metaDict["info"].(map[string]interface{})
+	if !ok {
+		return metainfo{}, errors.New("info not found")
+	}
+
+	length, ok := infoDict["length"].(int)
+	if !ok {
+		return metainfo{}, errors.New("length not found")
+	}
+
+	name, ok := infoDict["name"].(string)
+	if !ok {
+		return metainfo{}, errors.New("name not found")
+	}
+
+	pieceLength, ok := infoDict["piece length"].(int)
+	if !ok {
+		return metainfo{}, errors.New("piece length not found")
+	}
+
+	pieces, ok := infoDict["pieces"].(string)
+	if !ok {
+		return metainfo{}, errors.New("pieces not found")
+	}
+
 	meta := metainfo{
-		Announce: dict1["announce"].(string),
+		Announce: announce,
 		Info: info{
-			Length:      dict2["length"].(int),
-			Name:        dict2["name"].(string),
-			PieceLength: dict2["piece length"].(int),
-			Pieces:      dict2["pieces"].(string),
+			Length:      length,
+			Name:        name,
+			PieceLength: pieceLength,
+			Pieces:      pieces,
 		},
 	}
+	return meta, nil
+}
 
-	infoBencode := encodeBencode(dict2)
+func (m *metainfo) infoHash() string {
+	v := make(map[string]interface{})
+	v["length"] = m.Info.Length
+	v["name"] = m.Info.Name
+	v["piece length"] = m.Info.PieceLength
+	v["pieces"] = m.Info.Pieces
+	infoBencode := encodeBencode(v)
 	checksum := sha1.Sum([]byte(infoBencode))
-	meta.infoHash = hex.EncodeToString(checksum[:])
+	return hex.EncodeToString(checksum[:])
+}
 
-	pieceHashes := make([]string, 0, len(meta.Info.Pieces)/20)
-	for i := 0; i < len(meta.Info.Pieces); i += 20 {
-		pieceHash := hex.EncodeToString([]byte(meta.Info.Pieces[i : i+20]))
+func (m *metainfo) pieceHashes() []string {
+	pieceHashes := make([]string, 0, len(m.Info.Pieces)/20)
+	for i := 0; i < len(m.Info.Pieces); i += 20 {
+		pieceHash := hex.EncodeToString([]byte(m.Info.Pieces[i : i+20]))
 		pieceHashes = append(pieceHashes, pieceHash)
 	}
-	meta.pieceHashes = pieceHashes
-
-	return meta, nil
+	return pieceHashes
 }

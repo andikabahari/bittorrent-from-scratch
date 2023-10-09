@@ -26,35 +26,25 @@ func main() {
 
 	case "info":
 		torrentPath := os.Args[2]
-		bencode, err := os.ReadFile(torrentPath)
+		meta, err := parseTorrent(torrentPath)
 		if err != nil {
-			log.Fatalf("Error reading file: %s", err)
-		}
-
-		meta, err := newMetainfo(string(bencode))
-		if err != nil {
-			log.Fatalf("Error creating metainfo: %v", err)
+			log.Fatalf("Error parsing torrent file: %v", err)
 		}
 		fmt.Println("Tracker URL:", meta.Announce)
 		fmt.Println("Length:", meta.Info.Length)
-		fmt.Println("Info Hash:", meta.infoHash)
+		fmt.Println("Info Hash:", meta.infoHash())
 		fmt.Println("Piece Length:", meta.Info.PieceLength)
-		fmt.Printf("Piece Hashes:\n%s\n", strings.Join(meta.pieceHashes, "\n"))
+		fmt.Printf("Piece Hashes:\n%s\n", strings.Join(meta.pieceHashes(), "\n"))
 
 	case "peers":
 		torrentPath := os.Args[2]
-		bencode, err := os.ReadFile(torrentPath)
+		meta, err := parseTorrent(torrentPath)
 		if err != nil {
-			log.Fatalf("Error reading file: %s", err)
-		}
-
-		meta, err := newMetainfo(string(bencode))
-		if err != nil {
-			log.Fatalf("Error creating metainfo: %v", err)
+			log.Fatalf("Error parsing torrent file: %v", err)
 		}
 
 		request := trackerRequest{
-			InfoHash:   meta.infoHash,
+			InfoHash:   meta.infoHash(),
 			PeerId:     "00112233445566778899",
 			Port:       6881,
 			Uploaded:   0,
